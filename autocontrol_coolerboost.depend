@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1670779096 source:/mnt/1/projects/autocontrol_coolerboost/main.cpp
+	<fstream>
+	<iostream>
+	<string>
+	<algorithm>
+
