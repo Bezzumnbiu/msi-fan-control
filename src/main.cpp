@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-
 // For futures //
 
 //int readACBConfig() {
@@ -74,14 +73,18 @@ int control_ACB() {
 
     std::fstream file;
     file.open(EC_FILE, std::ios::binary | std::ios::out | std::ios::in);
+    uint16_t realTemp[] = {0, 0};
+
     while (file.is_open()){
         file.seekg(REALTIME_CPU_TEMP);
-        if (file.get() > CPU_MAX_TEMP) {
+        file.read((char *) &realTemp[0], sizeof(uint16_t));
+        file.seekp(REALTIME_GPU_TEMP);
+        file.read((char *) &realTemp[1], sizeof(uint16_t));
+        if (realTemp[0] > CPU_MAX_TEMP || realTemp[1] > GPU_MAX_TEMP) {
             file.seekp(COOLER_BOOST) ;
             file.put(COOLER_BOOST_ON);
             }
-        file.seekg(REALTIME_GPU_TEMP);
-        if (file.get() < GPU_MAX_TEMP - 0x10) {
+        if (realTemp[0] < (CPU_MAX_TEMP - 0x10) || realTemp[1] < (GPU_MAX_TEMP - 0x10)) {
             file.seekp(COOLER_BOOST)  ;
             file.put(COOLER_BOOST_OFF);
         }
