@@ -3,8 +3,12 @@
 
 #define EC_FILE				"/sys/kernel/debug/ec/ec0/io"
 #define AUTOCOOLER_BOOST_CONFIG_FILE    "/etc/auto_coolerboost.cfg"
-#define CPU_MAX_TEMP                0x55
-#define GPU_MAX_TEMP                0x55
+#define SYSTEM_MAX_TEMP             0x5A
+#define SYSTEM_MIN_TEMP             0x55
+#define CPU_MAX_TEMP                0x50
+#define CPU_MIN_TEMP                0x4A
+#define GPU_MAX_TEMP                0x50
+#define GPU_MIN_TEMP                0x4A
 #define AUTOCOOLER_BOOST            0x01
 
 // Next comes the EC state address structure, don't change it if you don't understand why

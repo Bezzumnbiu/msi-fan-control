@@ -217,3 +217,17 @@
 	<any>
 	<string_view>
 
+1678736418 source:/mnt/1/proj/msi-fan-control/src/main.cpp
+	"defines.h"
+	<fstream>
+	<iostream>
+	<string>
+	<vector>
+	<stdlib.h>
+	<unistd.h>
+	<cstring>
+	<sstream>
+	<algorithm>
+
+1678736465 /mnt/1/proj/msi-fan-control/src/defines.h
+

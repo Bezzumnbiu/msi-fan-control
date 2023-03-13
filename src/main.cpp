@@ -5,41 +5,84 @@
 #include <vector>
 #include <stdlib.h>
 #include <unistd.h>
+#include <cstring>
+#include <sstream>
+#include <algorithm>
+using namespace std;
+
+string GetStdoutFromCommand(string cmd) {
+
+  string data;
+  FILE * stream;
+  char buffer[256];
+
+  stream = popen(cmd.c_str(), "r");
+
+  if (stream) {
+    while (!feof(stream))
+      if (fgets(buffer, 256, stream) != NULL) data.append(buffer);
+    pclose(stream);
+  }
+  return data;
+}
+
+
+char *convertToChar(const std::string & s)
+{
+   char *pc = new char[s.size()+1];
+   std::strcpy(pc, s.c_str());
+   return pc;
+}
+
+// for string delimiter
+std::vector<std::string> split(std::string s, std::string delimiter) {
+    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+    std::string token;
+    std::vector<std::string> res;
+
+    while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+        token = s.substr (pos_start, pos_end - pos_start);
+        pos_start = pos_end + delim_len;
+        res.push_back (token);
+    }
+
+    res.push_back (s.substr (pos_start));
+    return res;
+}
 
 void setFanTable() {
     std::fstream file;
     file.open(EC_FILE, std::ios::binary | std::ios::out | std::ios::in);
     if (file.is_open()) {
+
         file.seekp(CPU_TEMP_0); file.put(0x37);
         file.seekp(CPU_TEMP_1); file.put(0x41);
-        file.seekp(CPU_TEMP_2); file.put(0x46);
-        file.seekp(CPU_TEMP_3); file.put(0x50);
-        file.seekp(CPU_TEMP_4); file.put(0x52);
-        file.seekp(CPU_TEMP_5); file.put(0x55);
+        file.seekp(CPU_TEMP_2); file.put(0x47);
+        file.seekp(CPU_TEMP_3); file.put(0x4C);
+        file.seekp(CPU_TEMP_4); file.put(0x50);
+        file.seekp(CPU_TEMP_5); file.put(0x52);
 
         file.seekp(CPU_FAN_SPEED_0); file.put(0x00);
         file.seekp(CPU_FAN_SPEED_1); file.put(0x14);
         file.seekp(CPU_FAN_SPEED_2); file.put(0x28);
         file.seekp(CPU_FAN_SPEED_3); file.put(0x3B);
         file.seekp(CPU_FAN_SPEED_4); file.put(0x50);
-        file.seekp(CPU_FAN_SPEED_5); file.put(0xFF);
+        file.seekp(CPU_FAN_SPEED_5); file.put(0xff);
 
         file.seekp(GPU_TEMP_0); file.put(0x37);
         file.seekp(GPU_TEMP_1); file.put(0x41);
-        file.seekp(GPU_TEMP_2); file.put(0x46);
-        file.seekp(GPU_TEMP_3); file.put(0x50);
-        file.seekp(GPU_TEMP_4); file.put(0x52);
-        file.seekp(GPU_TEMP_5); file.put(0x55);
+        file.seekp(GPU_TEMP_2); file.put(0x47);
+        file.seekp(GPU_TEMP_3); file.put(0x4C);
+        file.seekp(GPU_TEMP_4); file.put(0x50);
+        file.seekp(GPU_TEMP_5); file.put(0x52);
 
         file.seekp(GPU_FAN_SPEED_0); file.put(0x00);
         file.seekp(GPU_FAN_SPEED_1); file.put(0x14);
         file.seekp(GPU_FAN_SPEED_2); file.put(0x28);
         file.seekp(GPU_FAN_SPEED_3); file.put(0x3B);
         file.seekp(GPU_FAN_SPEED_4); file.put(0x50);
-        file.seekp(GPU_FAN_SPEED_5); file.put(0xFF);
+        file.seekp(GPU_FAN_SPEED_5); file.put(0xff);
 
-        file.seekp(BATTERY_CHARGING_THRESHOLD); file.put(0x5A);
-        file.seekp(FAN_MODE); file.put(0x8C);
 
             std::cout << "The table was successfully written" << std::endl;
         }
@@ -47,44 +90,80 @@ void setFanTable() {
         file.close();
 }
 
-int control_ACB() {
-    //Open EC file from debugfs and initialize realTemp array with values of... Real Temperatures?
-    std::fstream file;
-    file.open(EC_FILE, std::ios::binary | std::ios::out | std::ios::in);
-    uint16_t realTemp[] = {0, 0};
+int control_ACB(const std::vector<std::string> fileBuffer) {
 
-    while (file.is_open()){
-        // Checks and write temperatures to realTemp buffer
-        file.seekg(REALTIME_CPU_TEMP);
-        file.read((char *) &realTemp[0], sizeof(uint16_t));
-        file.seekp(REALTIME_GPU_TEMP);
-        file.read((char *) &realTemp[1], sizeof(uint16_t));
-        // Move to Cooler Boost address
-        file.seekp(COOLER_BOOST) ;
-        // Write value to start Cooler Boost
-        if ( bool((realTemp[0] > CPU_MAX_TEMP) || (realTemp[1] > GPU_MAX_TEMP)) ) {
-            file.put(COOLER_BOOST_ON);
-            }
-        if ( bool((realTemp[0] < (CPU_MAX_TEMP - 0x0A)) && ((realTemp[1] < (GPU_MAX_TEMP - 0x0A)))) ) {
-            file.put(COOLER_BOOST_OFF);
+//    uint16_t realTemp[fileBuffer.size()];
+    std::vector<char*> realTemp;
+    std::transform(fileBuffer.begin(), fileBuffer.end(), std::back_inserter(realTemp), convertToChar);
+
+    int realIntTemp[realTemp.size()];
+    for (int i=0; i < realTemp.size(); i++){
+        std::ifstream hwmonFile(realTemp[i]);
+        while(hwmonFile >> realIntTemp[i]){
         }
-        file.close();
+    }
+    for (int i=0; i < realTemp.size()-1;i++){
+        realIntTemp[i] = realIntTemp[i]/1000;
+    }
+
+    bool flagState = 0;
+    std::vector<bool> boolTempTable;
+
+    for(int i=0; i<realTemp.size()-1; i++){
+        boolTempTable.push_back(realIntTemp[i] > SYSTEM_MAX_TEMP);
+        if (boolTempTable[i]){flagState = 1;}
+        std::cout << boolTempTable[i] << std::endl;
+    }
+//    for(int i=0; i<realTemp.size()-1; i++){
+//        std::cout << boolTempTable[i] << std::endl;
+//    }
+    //Open EC file from debugfs and initialize realTemp array with values of... Real Temperatures?
+    std::fstream controllerFile;
+    controllerFile.open(EC_FILE, std::ios::binary | std::ios::out);
+
+    while (controllerFile.is_open()){
+        // Move to Cooler Boost address
+        controllerFile.seekp(COOLER_BOOST);
+
+        if (flagState == 1){controllerFile.put(COOLER_BOOST_ON) ;}
+        if (flagState == 0){controllerFile.put(COOLER_BOOST_OFF);}
+        controllerFile.close();
     }
     sleep(1);
     return 0;
 }
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
 // Need to support write to EC, checks kernel modules if have errors
+    int counter;
     system("modprobe ec_sys write_support=1");
+    std::string str = GetStdoutFromCommand("ls /sys/class/hwmon/*/temp*_input");;
+    std::string delimiter = "\n";
+    std::vector<std::string> v = split (str, delimiter);
+    std::vector<std::string> tempBuffer;
+
+    for (string i : v){
+        tempBuffer.push_back(i);
+    }
+
+    while (true) {
+        control_ACB(tempBuffer);
+    }
+
+
+    return 0;
+
+
 
 // readACBConfig();
     // Write EC table to works cooler fine
-    setFanTable();
+    //setFanTable();
     //Enable infilite loop...
-    while (true) {
-        control_ACB();
-    }
+
+
+
+
+
+
 }
