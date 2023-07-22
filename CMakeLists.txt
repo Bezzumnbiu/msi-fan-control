@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(testing VERSION 1.2)
+project(msi-fan-control VERSION 1.2)
 add_executable(msi-fan-control src/main.cpp src/defines.h)
 
 set(CMAKE_CXX_STANDARD 17)
