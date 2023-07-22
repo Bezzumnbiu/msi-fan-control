@@ -25,7 +25,6 @@ checkHardwarePaths() {
   }
   return tempBuffer_paths;
 }
-
 void setFanTable() {
   std::fstream file;
   file.open(EC_FILE, std::ios::binary | std::ios::out | std::ios::in);
@@ -63,44 +62,48 @@ void setFanTable() {
   }
   sleep(1);
 }
-
-int control_ACB(const std::vector<std::string> &fileBuffer) {
-  bool flagState = 0;
+void enableCoolerBoost(){
+  std::fstream controllerFile(EC_FILE, std::ios::binary | std::ios::out);
+  while (controllerFile.is_open()){
+  controllerFile.seekp(COOLER_BOOST);
+  controllerFile.put(COOLER_BOOST_ON);
+  controllerFile.close();
+  }
+}
+void disableCoolerBoost(){
+  std::fstream controllerFile(EC_FILE, std::ios::binary | std::ios::out);
+  while (controllerFile.is_open()){
+  controllerFile.seekp(COOLER_BOOST);
+  controllerFile.put(COOLER_BOOST_OFF);
+  controllerFile.close();
+  }
+}
+void coolerBoostRequired(const std::vector<std::string> &fileBuffer){
+  int maxTemp = 0;
   for (int i = 0; i < fileBuffer.size(); i++) {
     std::ifstream hwmonFile(fileBuffer[i]);
     int tmpTemp;
     while(hwmonFile >> tmpTemp){
+      if (maxTemp < tmpTemp)
+        maxTemp = tmpTemp;
       if((tmpTemp / 1000) > SYSTEM_MAX_TEMP){
-        flagState = 1;
+        enableCoolerBoost();
         break;
       }
     }
   }
-
-  std::fstream controllerFile(EC_FILE, std::ios::binary | std::ios::out);
-  while (controllerFile.is_open()) {
-    // Move to Cooler Boost address
-    controllerFile.seekp(COOLER_BOOST);
-
-    if (flagState == 1) {
-      controllerFile.put(COOLER_BOOST_ON);
-    }
-    if (flagState == 0) {
-      controllerFile.put(COOLER_BOOST_OFF);
-    }
-    controllerFile.close();
-  }
-
+  if((maxTemp / 1000) < SYSTEM_MIN_TEMP)
+    disableCoolerBoost();
   sleep(1);
-  return 0;
 }
-
 int main(int argc, char *argv[]) {
   // Need to support write to EC, checks kernel modules if have errors
   system("modprobe ec_sys write_support=1");
   setFanTable();
+  std::vector<std::string> HardwarePaths = checkHardwarePaths();
+
   while (true) {
-    control_ACB(checkHardwarePaths());
+    coolerBoostRequired(HardwarePaths);
   }
   return 0;
 }
