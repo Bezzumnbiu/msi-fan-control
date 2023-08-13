@@ -64,24 +64,22 @@ void setFanTable() {
 }
 void enableCoolerBoost(){
   std::fstream controllerFile(EC_FILE, std::ios::binary | std::ios::out);
-  while (controllerFile.is_open()){
+  if (controllerFile.is_open()){
   controllerFile.seekp(COOLER_BOOST);
   controllerFile.put(COOLER_BOOST_ON);
-  controllerFile.close();
   }
 }
 void disableCoolerBoost(){
   std::fstream controllerFile(EC_FILE, std::ios::binary | std::ios::out);
-  while (controllerFile.is_open()){
+  if (controllerFile.is_open()){
   controllerFile.seekp(COOLER_BOOST);
   controllerFile.put(COOLER_BOOST_OFF);
-  controllerFile.close();
   }
 }
-void coolerBoostRequired(const std::vector<std::string> &fileBuffer){
+void coolerBoostRequired(const auto &fileBuffer){
   int maxTemp = 0;
-  for (int i = 0; i < fileBuffer.size(); i++) {
-    std::ifstream hwmonFile(fileBuffer[i]);
+  for (const auto &f : fileBuffer) {
+    std::ifstream hwmonFile(f);
     int tmpTemp;
     while(hwmonFile >> tmpTemp){
       if (maxTemp < tmpTemp)
@@ -100,7 +98,7 @@ int main(int argc, char *argv[]) {
   // Need to support write to EC, checks kernel modules if have errors
   system("modprobe ec_sys write_support=1");
   setFanTable();
-  std::vector<std::string> HardwarePaths = checkHardwarePaths();
+  const auto HardwarePaths = checkHardwarePaths();
 
   while (true) {
     coolerBoostRequired(HardwarePaths);
